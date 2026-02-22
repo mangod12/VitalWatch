@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VitalWatch Dashboard</title>
+  <style>
+    :root {
+      --normal: #22c55e;
+      --warning: #eab308;
+      --critical: #ef4444;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: white;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .feed-wrap {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16/10;
+    }
+    .feed-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .severity-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #000;
+      transition: background-color 0.3s;
+    }
+    .severity-bar.normal { background: var(--normal); }
+    .severity-bar.warning { background: var(--warning); }
+    .severity-bar.critical { background: var(--critical); }
+    .sidebar h2 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .alerts-list, .event-log {
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+    .alert-item, .log-item {
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .alert-item .sev { font-weight: 600; }
+    .alert-item .sev.warning { color: var(--warning); }
+    .alert-item .sev.critical { color: var(--critical); }
+    .event-log .time { color: var(--muted); font-size: 0.8rem; }
+    .status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--normal);
+      margin-right: 0.5rem;
+      animation: pulse 2s infinite;
+    }
+    .status.off { background: var(--critical); }
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:0.6 } }
+  </style>
+</head>
+<body>
+  <h1><span class="status" id="statusDot"></span> VitalWatch Dashboard</h1>
+  <div class="layout">
+    <div class="card">
+      <div class="feed-wrap">
+        <div class="severity-bar normal" id="severityBar">Severity: Normal</div>
+        <img id="videoFeed" src="/stream" alt="Live feed" />
+      </div>
+    </div>
+    <div class="card">
+      <h2>Active alerts</h2>
+      <div class="alerts-list" id="alertsList"></div>
+      <h2 style="margin-top: 1rem;">Event log</h2>
+      <div class="event-log" id="eventLog"></div>
+      <h2 style="margin-top: 1rem;">Recent events</h2>
+      <table id="eventsTable" style="width:100%; font-size:0.85rem;">
+        <thead>
+          <tr><th>Time</th><th>Type</th><th>Level</th><th>Score</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const severityBar = document.getElementById('severityBar');
+    const alertsList = document.getElementById('alertsList');
+    const eventLog = document.getElementById('eventLog');
+    const statusDot = document.getElementById('statusDot');
+    const alerts = [];
+    const logEntries = [];
+    const maxAlerts = 20;
+    const maxLog = 50;
+
+    function addAlert(data) {
+      alerts.unshift(data);
+      if (alerts.length > maxAlerts) alerts.pop();
+      renderAlerts();
+      logEntries.unshift({ time: new Date().toLocaleTimeString(), ...data });
+      if (logEntries.length > maxLog) logEntries.pop();
+      renderLog();
+    }
+
+    function renderAlerts() {
+      severityBar.textContent = alerts.length
+        ? `Severity: ${alerts[0].severity} (score: ${alerts[0].score})`
+        : 'Severity: Normal';
+      severityBar.className = 'severity-bar ' + (alerts[0] ? alerts[0].severity.toLowerCase() : 'normal');
+      alertsList.innerHTML = alerts.slice(0, 10).map(a =>
+        `<div class="alert-item"><span class="sev ${a.severity.toLowerCase()}">${a.event}</span><span>${a.score.toFixed(2)}</span></div>`
+      ).join('');
+    }
+
+    function renderLog() {
+      eventLog.innerHTML = logEntries.map(e =>
+        `<div class="log-item"><span class="time">${e.time}</span><span>${e.event} – ${e.severity}</span></div>`
+      ).join('');
+    }
+
+    const ws = new WebSocket(`ws://${location.host}/alerts`);
+    ws.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        addAlert(data);
+        appendEvent(data);
+      } catch (_) {}
+    };
+    ws.onopen = () => { statusDot.classList.remove('off'); };
+    ws.onclose = () => { statusDot.classList.add('off'); };
+
+    function appendEvent(ev) {
+      const tbody = document.querySelector('#eventsTable tbody');
+      const row = document.createElement('tr');
+      const time = new Date(ev.time * 1000).toLocaleTimeString();
+      row.innerHTML = `<td>${time}</td><td>${ev.event}</td><td>${ev.severity}</td><td>${ev.score.toFixed(2)}</td>`;
+      tbody.prepend(row);
+      // keep max 50
+      while (tbody.children.length > 50) tbody.removeChild(tbody.lastChild);
+    }
+
+    // load existing events
+    fetch('/events')
+      .then(r => r.json())
+      .then(list => {
+        const tbody = document.querySelector('#eventsTable tbody');
+        list.reverse().forEach(ev => {
+          const time = new Date(ev.created_at).toLocaleTimeString();
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${time}</td><td>${ev.event_type}</td><td>${ev.severity_level}</td><td>${ev.severity_score.toFixed(2)}</td>`;
+          tbody.appendChild(row);
+        });
+      });
+
+    fetch('/health').then(r => r.json()).then(() => { statusDot.classList.remove('off'); }).catch(() => { statusDot.classList.add('off'); });
+  </script>
+</body>
+</html>
