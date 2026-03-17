@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VitalWatch — Patient Monitoring System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --normal: #10b981;
+      --normal-bg: rgba(16, 185, 129, 0.10);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.10);
+      --critical: #ef4444;
+      --critical-bg: rgba(239, 68, 68, 0.10);
+      --offline: #64748b;
+      --bg: #080e1e;
+      --bg-raised: #0f172a;
+      --card: #131c32;
+      --card-hover: #182545;
+      --border: rgba(255, 255, 255, 0.05);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --text: #e8ecf4;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --accent-bg: rgba(59, 130, 246, 0.10);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-y: scroll;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    /* ── Top Navigation Bar ── */
+    .topnav {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    }
+
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .topnav-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -1px;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .topnav-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .topnav-subtitle {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+    }
+
+    .topnav-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--normal);
+      box-shadow: 0 0 8px var(--normal);
+      animation: pulse-glow 2s infinite;
+    }
+
+    .status-dot.offline {
+      background: var(--critical);
+      box-shadow: 0 0 8px var(--critical);
+      animation: none;
+    }
+
+    @keyframes pulse-glow {
+
+      0%,
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 8px var(--normal);
+      }
+
+      50% {
+        opacity: 0.5;
+        box-shadow: 0 0 4px var(--normal);
+      }
+    }
+
+    .topnav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .topnav-time {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── KPI Stat Bar ── */
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      padding: 1.25rem 2rem;
+      background: var(--bg-raised);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .kpi-card {
+      background: linear-gradient(135deg, var(--card), rgba(25, 35, 60, 0.7));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.02), transparent 70%);
+      pointer-events: none;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .kpi-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .kpi-icon.critical {
+      background: var(--critical-bg);
+    }
+
+    .kpi-icon.warning {
+      background: var(--warning-bg);
+    }
+
+    .kpi-icon.normal {
+      background: var(--normal-bg);
+    }
+
+    .kpi-icon.offline {
+      background: rgba(100, 116, 139, 0.12);
+    }
+
+    .kpi-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kpi-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-value.critical {
+      color: var(--critical);
+    }
+
+    .kpi-value.warning {
+      color: var(--warning);
+    }
+
+    .kpi-value.normal {
+      color: var(--normal);
+    }
+
+    .kpi-value.offline {
+      color: var(--offline);
+    }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-top: 0.2rem;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left .filter-select {
+      padding: 0.5rem 0.75rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      min-width: 160px;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      padding-right: 2rem;
+    }
+
+    .toolbar-left .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+
+    .patient-total {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      background: var(--card);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .patient-total strong {
+      color: var(--text);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: white;
+      font-weight: 600;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-hover);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    /* ── Main Layout ── */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      padding: 0 2rem 2rem 2rem;
+      max-width: 1920px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1200px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-bar {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .toolbar,
+      .main-layout {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+
+    /* ── Feed Section ── */
+    .feed-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ── Section Wrappers ── */
+    .section-wrapper {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .section-header.priority-header {
+      color: var(--critical);
+    }
+
+    .section-header.normal-header {
+      color: var(--normal);
+    }
+
+    .section-header .section-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    .section-header.priority-header .section-icon {
+      background: var(--critical-bg);
+      color: var(--critical);
+    }
+
+    .section-header.normal-header .section-icon {
+      background: var(--normal-bg);
+      color: var(--normal);
+    }
+
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ── Patient Grids ── */
+    .priority-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    .normal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+
+    /* ── Patient Card ── */
+    .patient-card {
+      background: linear-gradient(165deg, var(--bg-raised), rgba(19, 28, 50, 0.8));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      animation: cardFadeIn 0.4s ease;
+      position: relative;
+    }
+
+    .patient-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(ellipse at top center, rgba(255, 255, 255, 0.015), transparent 60%);
+      pointer-events: none;
+    }
+
+    @keyframes cardFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .patient-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), var(--shadow-glow);
+    }
+
+    .patient-card.priority {
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.08);
+    }
+
+    .patient-card.priority:hover {
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .patient-card.card-warning {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .patient-video {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #080d18;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .patient-video img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .patient-info {
+      padding: 0.85rem 1rem;
+      border-top: 1px solid var(--border);
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .patient-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .patient-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .patient-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 100px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .patient-badge.normal {
+      background: var(--normal-bg);
+      color: var(--normal);
+    }
+
+    .patient-badge.warning {
+      background: var(--warning-bg);
+      color: var(--warning);
+    }
+
+    .patient-badge.critical {
+      background: var(--critical-bg);
+      color: var(--critical);
+    }
+
+    .patient-badge.offline {
+      background: rgba(100, 116, 139, 0.15);
+      color: var(--offline);
+    }
+
+    .alert-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .alert-indicator.critical {
+      background: var(--critical);
+      box-shadow: 0 0 6px var(--critical);
+      animation: pulse-glow-red 1.5s infinite;
+    }
+
+    .alert-indicator.warning {
+      background: var(--warning);
+      box-shadow: 0 0 6px var(--warning);
+    }
+
+    .alert-indicator.normal {
+      background: var(--normal);
+    }
+
+    @keyframes pulse-glow-red {
+
+      0%,
+      100% {
+        box-shadow: 0 0 6px var(--critical);
+        transform: scale(1);
+      }
+
+      50% {
+        box-shadow: 0 0 14px var(--critical);
+        transform: scale(1.2);
+      }
+    }
+
+    @keyframes pulse-glow-amber {
+
+      0%,
+      100% {
+        box-shadow: 0 0 4px var(--warning);
+        opacity: 1;
+      }
+
+      50% {
+        box-shadow: 0 0 10px var(--warning);
+        opacity: 0.7;
+      }
+    }
+
+    .alert-indicator.warning {
+      background: var(--warning);
+      box-shadow: 0 0 6px var(--warning);
+      animation: pulse-glow-amber 2.5s ease-in-out infinite;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .sidebar-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .sidebar-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    .sidebar-card-body {
+      padding: 1rem;
+    }
+
+    /* ── Distress Monitor ── */
+    .distress-monitor {
+      text-align: center;
+    }
+
+    .distress-level {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .distress-level.level-normal {
+      color: var(--normal);
+    }
+
+    .distress-level.level-warning {
+      color: var(--warning);
+    }
+
+    .distress-level.level-critical {
+      color: var(--critical);
+    }
+
+    .distress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 0.8rem;
+    }
+
+    .distress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease, background 0.5s ease;
+      width: 0%;
+      background: var(--normal);
+    }
+
+    .distress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .distress-meta strong {
+      color: var(--text);
+    }
+
+    /* ── Alerts ── */
+    .alerts-list {
+      max-height: 300px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .alert-item {
+      background: var(--bg-raised);
+      padding: 0.7rem 0.85rem;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .alert-item.critical {
+      border-left-color: var(--critical);
+    }
+
+    .alert-item.warning {
+      border-left-color: var(--warning);
+    }
+
+    .alert-time {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 0.3rem;
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-secondary);
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+
+    .empty-state svg {
+      width: 2.5rem;
+      height: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.4;
+    }
+
+    /* ── Modal ── */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.2s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal-content {
+      background: var(--card);
+      margin: 36px auto;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 94%;
+      max-width: 540px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), var(--shadow-glow);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.3rem;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.15s;
+    }
+
+    .close-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      transform: none;
+      box-shadow: none;
+    }
+
+    .form-body {
+      padding: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 0.6rem 0.75rem;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Expand Modal ── */
+    .expand-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      cursor: pointer;
+    }
+
+    .expand-modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .expand-modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      overflow-y: auto;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      cursor: default;
+      animation: scaleIn 0.25s ease;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(59, 130, 246, 0.05);
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.92);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .expand-modal-video {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      position: relative;
+    }
+
+    .expand-modal-video img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .expand-modal-info {
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .expand-modal-info h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .expand-modal-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+    }
+
+    .expand-close-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 1.3rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .expand-close-btn:hover {
+      background: rgba(239, 68, 68, 0.7);
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="topnav">
+    <div class="topnav-brand">
+      <div class="topnav-logo">VW</div>
+      <div>
+        <div class="topnav-title">VitalWatch</div>
+        <div class="topnav-subtitle">Patient Monitoring System</div>
+      </div>
+    </div>
+    <div class="topnav-actions">
+      <div class="topnav-status">
+        <span class="status-dot" id="statusIndicator"></span>
+        <span id="connectionLabel">Connected</span>
+      </div>
+      <div class="topnav-time" id="liveTime"></div>
+      <button class="btn" onclick="openAddPatientModal()">+ Add Patient</button>
+    </div>
+  </nav>
+
+  <!-- KPI Stat Bar -->
+  <div class="kpi-bar">
+    <div class="kpi-card">
+      <div class="kpi-icon critical">⚠</div>
+      <div class="kpi-info">
+        <div class="kpi-value critical" id="criticalCount">0</div>
+        <div class="kpi-label">Critical</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon warning">⚡</div>
+      <div class="kpi-info">
+        <div class="kpi-value warning" id="warningCount">0</div>
+        <div class="kpi-label">Warning</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon normal">✓</div>
+      <div class="kpi-info">
+        <div class="kpi-value normal" id="normalCount">0</div>
+        <div class="kpi-label">Stable</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon offline">○</div>
+      <div class="kpi-info">
+        <div class="kpi-value offline" id="offlineCount">0</div>
+        <div class="kpi-label">Offline</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar / Filters -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <select id="departmentFilter" class="filter-select">
+        <option value="">All Departments</option>
+        <option value="cardiology">Cardiology</option>
+        <option value="neurology">Neurology</option>
+        <option value="trauma">Trauma</option>
+        <option value="general">General Medicine</option>
+        <option value="respiratory">Respiratory</option>
+      </select>
+      <select id="careTypeFilter" class="filter-select">
+        <option value="">All Care Types</option>
+        <option value="ccu">CCU (Coronary)</option>
+        <option value="icu">ICU (Intensive)</option>
+        <option value="general">General Ward</option>
+      </select>
+      <div class="patient-total">
+        <strong id="totalPatients">0</strong> patients
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Patient Modal -->
+  <div id="addPatientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Register New Patient</h2>
+        <button class="close-btn" onclick="closeAddPatientModal()">&times;</button>
+      </div>
+      <form id="addPatientForm" onsubmit="submitAddPatientForm(event)">
+        <div class="form-body" style="max-height:65vh;overflow-y:auto;">
+          <div class="form-group">
+            <label for="patientName">Patient Name *</label>
+            <input type="text" id="patientName" name="name" required placeholder="Full name">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div class="form-group">
+              <label for="patientGender">Gender *</label>
+              <select id="patientGender" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="patientAdmissionDate">Admission Date</label>
+              <input type="date" id="patientAdmissionDate" name="admission_date">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="patientCause">Cause / Diagnosis *</label>
+            <input type="text" id="patientCause" name="cause" required
+              placeholder="e.g., Post-cardiac surgery monitoring">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div class="form-group">
+              <label for="patientDepartment">Department *</label>
+              <select id="patientDepartment" name="department" required>
+                <option value="">Select Department</option>
+                <option value="cardiology">Cardiology</option>
+                <option value="neurology">Neurology</option>
+                <option value="trauma">Trauma</option>
+                <option value="general">General Medicine</option>
+                <option value="respiratory">Respiratory</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="patientCareType">Care Type *</label>
+              <select id="patientCareType" name="care_type" required>
+                <option value="">Select Care Type</option>
+                <option value="ccu">CCU (Coronary Care Unit)</option>
+                <option value="icu">ICU (Intensive Care Unit)</option>
+                <option value="general">General Ward</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div class="form-group">
+              <label for="patientWardNo">Ward Number</label>
+              <input type="text" id="patientWardNo" name="ward_no" placeholder="e.g., W-10">
+            </div>
+            <div class="form-group">
+              <label for="patientBed">Bed Number</label>
+              <input type="text" id="patientBed" name="bed_number" placeholder="e.g., ICU-101">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <div class="form-group">
+              <label for="patientDoctor">Doctor Assigned</label>
+              <input type="text" id="patientDoctor" name="doctor_assigned" placeholder="e.g., Dr. Smith">
+            </div>
+            <div class="form-group">
+              <label for="patientNurse">Nurse Assigned</label>
+              <input type="text" id="patientNurse" name="assigned_nurse" placeholder="e.g., Nurse Sarah">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="patientHistory">Previous Medical History</label>
+            <textarea id="patientHistory" name="previous_medical_history"
+              placeholder="e.g., Hypertension, Diabetes Type 2" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="patientNotes">Notes</label>
+            <textarea id="patientNotes" name="notes" placeholder="Additional notes" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
+          <button type="submit" class="btn">Create Patient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Patient Expand Modal -->
+  <div class="expand-modal-overlay" id="expandModalOverlay" onclick="closeExpandModal()">
+    <div class="expand-modal" onclick="event.stopPropagation()">
+      <div class="expand-modal-video">
+        <button class="expand-close-btn" onclick="closeExpandModal()">&times;</button>
+        <img id="expandModalImg" src="" alt="Patient Feed">
+      </div>
+      <div class="expand-modal-info">
+        <div>
+          <h3 id="expandModalName">Patient</h3>
+          <div class="expand-modal-meta">
+            <span id="expandModalDept"></span>
+            <span>&bull;</span>
+            <span id="expandModalCare"></span>
+          </div>
+        </div>
+        <div id="expandModalBadge"></div>
+      </div>
+      <div id="expandModalDetails"
+        style="padding:0.8rem 1.2rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 1.2rem;font-size:0.82rem;color:var(--text-secondary);border-top:1px solid rgba(255,255,255,0.06);">
+        <div><strong style="color:var(--text-primary);">Patient ID:</strong> <span id="expandModalId">—</span></div>
+        <div><strong style="color:var(--text-primary);">Gender:</strong> <span id="expandModalGender">—</span></div>
+        <div><strong style="color:var(--text-primary);">Admission:</strong> <span id="expandModalAdmission">—</span>
+        </div>
+        <div><strong style="color:var(--text-primary);">Cause:</strong> <span id="expandModalCause">—</span></div>
+        <div><strong style="color:var(--text-primary);">Ward:</strong> <span id="expandModalWard">—</span></div>
+        <div><strong style="color:var(--text-primary);">Bed:</strong> <span id="expandModalBed">—</span></div>
+        <div><strong style="color:var(--text-primary);">Doctor:</strong> <span id="expandModalDoctor">—</span></div>
+        <div><strong style="color:var(--text-primary);">Nurse:</strong> <span id="expandModalNurse">—</span></div>
+        <div style="grid-column:1/-1;"><strong style="color:var(--text-primary);">Medical History:</strong> <span
+            id="expandModalHistory">—</span></div>
+        <div style="grid-column:1/-1;"><strong style="color:var(--text-primary);">Notes:</strong> <span
+            id="expandModalNotes">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-layout">
+    <!-- Patient Feed -->
+    <div class="feed-section">
+
+      <!-- Priority Patients Section -->
+      <div id="prioritySection" style="display: none;">
+        <div class="section-wrapper">
+          <div class="section-header priority-header">
+            <span class="section-icon">!</span>
+            Requires Immediate Attention
+          </div>
+          <div class="section-body">
+            <div class="priority-grid" id="priorityGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Normal Patients Section -->
+      <div id="normalSection" style="display: none;">
+        <div class="section-wrapper">
+          <div class="section-header normal-header">
+            <span class="section-icon">✓</span>
+            Stable Patients
+          </div>
+          <div class="section-body">
+            <div class="normal-grid" id="normalGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p>No patients to display. Add a patient or adjust filters.</p>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <!-- Distress Monitor -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          🧠 Distress Monitor
+        </div>
+        <div class="sidebar-card-body">
+          <div class="distress-monitor">
+            <div class="distress-level level-normal" id="distressLevel">NORMAL</div>
+            <div class="distress-bar-bg">
+              <div class="distress-bar-fill" id="distressBar"></div>
+            </div>
+            <div class="distress-meta">
+              <span>Score: <strong id="distressScore">0.000</strong></span>
+              <span>Faces: <strong id="distressFaces">0</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-header">
+          🔔 Recent Alerts
+        </div>
+        <div class="sidebar-card-body">
+          <div class="alerts-list" id="alertsList">
+            <div style="text-align: center; color: var(--text-secondary); padding: 1rem; font-size: 0.82rem;">
+              No alerts
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // Live clock
+    function updateClock() {
+      const now = new Date();
+      const el = document.getElementById('liveTime');
+      if (el) el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- Alarm Classes ---
+
+    class WebAudioAlarm {
+      constructor() {
+        this.ctx = null;
+        this.osc = null;
+        this.gain = null;
+        this.isPlaying = false;
+        this.level = null; // 'critical' or 'warning'
+        this.interval = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      start(level) {
+        if (this.isPlaying && this.level === level) return;
+        this.stop(); // Stop current if switching levels
+
+        this.init();
+        this.isPlaying = true;
+        this.level = level;
+
+        if (level === 'critical') {
+          // Fast dual-tone
+          this.interval = setInterval(() => {
+            this.playTone(880, 0.15); // A5 note
+            setTimeout(() => this.playTone(660, 0.15), 200); // E5 note
+          }, 1000);
+        } else if (level === 'warning') {
+          // Slow single-tone
+          this.interval = setInterval(() => {
+            this.playTone(440, 0.2); // A4
+          }, 2500);
+        }
+      }
+
+      stop() {
+        if (!this.isPlaying) return;
+        this.isPlaying = false;
+        this.level = null;
+        if (this.interval) {
+          clearInterval(this.interval);
+          this.interval = null;
+        }
+      }
+
+      playTone(freq, duration) {
+        if (!this.ctx || this.ctx.state === 'suspended') return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      }
+    }
+
+    class TitleFlicker {
+      constructor() {
+        this.originalTitle = document.title;
+        this.interval = null;
+        this.isFlickering = false;
+        this.level = null;
+      }
+
+      start(level) {
+        if (this.isFlickering && this.level === level) return;
+        this.stop();
+
+        this.isFlickering = true;
+        this.level = level;
+        let showWarning = true;
+
+        const msg = level === 'critical' ? "⚠️ CRITICAL ALERT ⚠️" : "⚡ WARNING ALERT ⚡";
+
+        this.interval = setInterval(() => {
+          document.title = showWarning ? msg : this.originalTitle;
+          showWarning = !showWarning;
+        }, 1000);
+      }
+
+      stop() {
+        if (!this.isFlickering) return;
+        this.isFlickering = false;
+        this.level = null;
+        if (this.interval) {
+          clearInterval(this.interval);
+          this.interval = null;
+        }
+        document.title = this.originalTitle;
+      }
+    }
+
+    class VitalWatchDashboard {
+      constructor() {
+        this.patients = new Map();
+        this.alerts = [];
+        this.department = '';
+        this.careType = '';
+        this.ws = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 10;
+        this.reconnectDelay = 1000;
+        this._snapshotUrl = null;
+
+        // Initialize Alarms
+        this.audioAlarm = new WebAudioAlarm();
+        this.titleFlicker = new TitleFlicker();
+
+        this.setupEventListeners();
+        this.connectWebSocket();
+        this.loadPatients();
+        this.setupStatusCheck();
+        this.startSnapshotPolling();
+      }
+
+      setupEventListeners() {
+        document.getElementById('departmentFilter').addEventListener('change', (e) => {
+          this.department = e.target.value;
+          this.filterAndRender();
+        });
+
+        document.getElementById('careTypeFilter').addEventListener('change', (e) => {
+          this.careType = e.target.value;
+          this.filterAndRender();
+        });
+
+        // Resume audio context on first click
+        document.addEventListener('click', () => {
+          this.audioAlarm.init();
+        }, { once: true });
+      }
+
+      connectWebSocket() {
+        try {
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          this.ws = new WebSocket(`${protocol}//${location.host}/ws/patients`);
+
+          this.ws.onopen = () => {
+            console.log('WebSocket connected');
+            this.updateStatusIndicator(true);
+            this.reconnectAttempts = 0;
+          };
+
+          this.ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              this.handleMessage(data);
+            } catch (e) {
+              console.error('Failed to parse WS message:', e);
+            }
+          };
+
+          this.ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            this.updateStatusIndicator(false);
+          };
+
+          this.ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            this.updateStatusIndicator(false);
+            this.attemptReconnect();
+          };
+        } catch (e) {
+          console.error('WebSocket connection failed:', e);
+          this.attemptReconnect();
+        }
+      }
+
+      attemptReconnect() {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
+          console.log(`Attempting to reconnect in ${delay}ms...`);
+          setTimeout(() => this.connectWebSocket(), delay);
+        }
+      }
+
+      handleMessage(data) {
+        if (data.type === 'patient_update') {
+          this.updatePatient(data.patient);
+          this.filterAndRender();
+        } else if (data.type === 'alert') {
+          this.addAlert(data);
+        } else if (data.type === 'patients_list') {
+          data.patients.forEach(p => this.updatePatient(p));
+          this.filterAndRender();
+        }
+      }
+
+      async loadPatients() {
+        try {
+          const response = await fetch('/api/patients');
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          this.patients.clear();
+          data.patients.forEach(p => { this.patients.set(p.id, p); });
+          this.filterAndRender();
+        } catch (e) {
+          console.error('[loadPatients] Error:', e.message);
+        }
+      }
+
+      updatePatient(patient) {
+        this.patients.set(patient.id, patient);
+      }
+
+      filterAndRender() {
+        const filtered = Array.from(this.patients.values()).filter(p => {
+          const deptMatch = !this.department || p.department === this.department;
+          const careMatch = !this.careType || p.care_type === this.careType;
+          return deptMatch && careMatch;
+        });
+
+        this.renderPatients(filtered);
+        this.updateStatistics(filtered);
+        this.checkAlarms(filtered);
+      }
+
+      renderPatients(patients) {
+        const priorityGrid = document.getElementById('priorityGrid');
+        const normalGrid = document.getElementById('normalGrid');
+        const prioritySection = document.getElementById('prioritySection');
+        const normalSection = document.getElementById('normalSection');
+        const emptyState = document.getElementById('emptyState');
+
+        const priority = patients
+          .filter(p => p.status === 'critical' || p.status === 'warning')
+          .sort((a, b) => {
+            const order = { critical: 0, warning: 1 };
+            const orderDiff = (order[a.status] ?? 2) - (order[b.status] ?? 2);
+            if (orderDiff !== 0) return orderDiff;
+            return (a.mood_score ?? 1) - (b.mood_score ?? 1);
+          });
+        const normal = patients.filter(p => p.status === 'normal' || p.status === 'offline');
+
+        if (priority.length > 0) {
+          prioritySection.style.display = 'block';
+          priorityGrid.innerHTML = priority.map(p => this.createPatientCard(p)).join('');
+        } else {
+          prioritySection.style.display = 'none';
+        }
+
+        if (normal.length > 0) {
+          normalSection.style.display = 'block';
+          normalGrid.innerHTML = normal.map(p => this.createPatientCard(p)).join('');
+        } else {
+          normalSection.style.display = 'none';
+        }
+
+        if (patients.length === 0) {
+          emptyState.style.display = 'block';
+        } else {
+          emptyState.style.display = 'none';
+        }
+
+        document.getElementById('totalPatients').textContent = patients.length;
+        this.updateSnapshotImages();
+      }
+
+      createPatientCard(patient) {
+        const isLarge = patient.status === 'critical' || patient.status === 'warning';
+        const statusClass = patient.status === 'warning' ? 'card-warning' : '';
+        const cardClass = isLarge ? `patient-card priority ${statusClass}` : 'patient-card';
+        const badge = `<span class="patient-badge ${patient.status}">${patient.status.toUpperCase()}</span>`;
+        const name = patient.name || 'Patient ' + patient.id;
+        const dept = patient.department ? patient.department.charAt(0).toUpperCase() + patient.department.slice(1) : '';
+        const care = patient.care_type ? patient.care_type.toUpperCase() : '';
+        const snapSrc = this._snapshotUrl || '';
+        const snapShow = this._snapshotUrl ? 'block' : 'none';
+        const phShow = this._snapshotUrl ? 'none' : 'flex';
+        const bedInfo = patient.bed_number ? `<span style="font-size:0.68rem;color:var(--text-secondary);">Bed ${patient.bed_number}</span>` : '';
+
+        if (isLarge) {
+          return `
+            <div class="${cardClass}" data-patient-id="${patient.id}"
+                 onclick="expandPatient('${patient.id}')">
+              <div class="patient-video">
+                <img class="patient-snapshot" src="${snapSrc}" alt="${name}"
+                     style="width:100%;height:100%;object-fit:cover;display:${snapShow};">
+                <div class="patient-snapshot-placeholder" style="display:${phShow};align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);flex-direction:column;gap:0.4rem;">
+                  <span style="font-size:1.8rem;">&#128249;</span>
+                  <span style="font-size:0.78rem;">Connecting feed...</span>
+                </div>
+              </div>
+              <div class="patient-info">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div class="patient-name">${name}</div>
+                  <div style="display:flex;gap:0.3rem;align-items:center;">
+                    <span class="alert-indicator ${patient.status}"></span>
+                    ${badge}
+                  </div>
+                </div>
+                <div class="patient-meta">
+                  <span>${patient.id} · ${dept} · ${care}</span>
+                  ${bedInfo}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="${cardClass}" data-patient-id="${patient.id}"
+               onclick="expandPatient('${patient.id}')" title="Click to expand">
+            <div class="patient-video" style="aspect-ratio:4/3;">
+              <img class="patient-snapshot" src="${snapSrc}" alt="${name}"
+                   style="width:100%;height:100%;object-fit:cover;display:${snapShow};">
+              <div class="patient-snapshot-placeholder" style="display:${phShow};align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-secondary);flex-direction:column;gap:0.3rem;">
+                <span style="font-size:1.1rem;">&#128249;</span>
+              </div>
+            </div>
+            <div class="patient-info" style="padding:0.55rem 0.7rem;">
+              <div class="patient-name" style="font-size:0.78rem;">${name}</div>
+              <div style="font-size:0.65rem;color:var(--text-secondary);margin-top:0.1rem;">${patient.id}</div>
+              <div style="display:flex;gap:0.3rem;align-items:center;margin-top:0.15rem;">
+                <span class="alert-indicator ${patient.status}"></span>
+                ${badge}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      startSnapshotPolling() {
+        setInterval(async () => {
+          try {
+            const response = await fetch('/api/snapshot');
+            if (response.ok && response.status === 200) {
+              const blob = await response.blob();
+              if (this._snapshotUrl) URL.revokeObjectURL(this._snapshotUrl);
+              this._snapshotUrl = URL.createObjectURL(blob);
+              this.updateSnapshotImages();
+            }
+          } catch {
+            // Server not available
+          }
+        }, 1500);
+      }
+
+      updateSnapshotImages() {
+        if (!this._snapshotUrl) return;
+        document.querySelectorAll('.patient-snapshot').forEach(img => {
+          img.src = this._snapshotUrl;
+          img.style.display = 'block';
+        });
+        document.querySelectorAll('.patient-snapshot-placeholder').forEach(el => {
+          el.style.display = 'none';
+        });
+        const overlay = document.getElementById('expandModalOverlay');
+        if (overlay && overlay.classList.contains('active')) {
+          document.getElementById('expandModalImg').src = this._snapshotUrl;
+        }
+      }
+
+      updateStatistics(patients) {
+        const stats = {
+          critical: patients.filter(p => p.status === 'critical').length,
+          warning: patients.filter(p => p.status === 'warning').length,
+          normal: patients.filter(p => p.status === 'normal').length,
+          offline: patients.filter(p => p.status === 'offline').length,
+        };
+
+        document.getElementById('criticalCount').textContent = stats.critical;
+        document.getElementById('warningCount').textContent = stats.warning;
+        document.getElementById('normalCount').textContent = stats.normal;
+        document.getElementById('offlineCount').textContent = stats.offline;
+      }
+
+      checkAlarms(patients) {
+        const hasCritical = patients.some(p => p.status === 'critical');
+        const hasWarning = patients.some(p => p.status === 'warning');
+
+        if (hasCritical) {
+          // Critical: audio + visual
+          this.audioAlarm.start('critical');
+          this.titleFlicker.start('critical');
+        } else if (hasWarning) {
+          // Warning: visual only (no sound)
+          this.audioAlarm.stop();
+          this.titleFlicker.start('warning');
+        } else {
+          this.audioAlarm.stop();
+          this.titleFlicker.stop();
+        }
+      }
+
+      addAlert(alert) {
+        this.alerts.unshift(alert);
+        if (this.alerts.length > 20) this.alerts.pop();
+        this.renderAlerts();
+      }
+
+      renderAlerts() {
+        const list = document.getElementById('alertsList');
+        if (this.alerts.length === 0) {
+          list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:1rem;font-size:0.82rem;">No alerts</div>';
+          return;
+        }
+
+        list.innerHTML = this.alerts.slice(0, 10).map(a => `
+            <div class="alert-item ${a.severity.toLowerCase()}">
+              <strong>Patient ${a.patient_id}</strong>: ${a.message}
+              <div class="alert-time">${new Date(a.timestamp).toLocaleTimeString()}</div>
+            </div>
+          `).join('');
+      }
+
+      updateStatusIndicator(connected) {
+        const dot = document.getElementById('statusIndicator');
+        const label = document.getElementById('connectionLabel');
+        if (connected) {
+          dot.classList.remove('offline');
+          if (label) label.textContent = 'Connected';
+        } else {
+          dot.classList.add('offline');
+          if (label) label.textContent = 'Disconnected';
+        }
+      }
+
+      setupStatusCheck() {
+        setInterval(async () => {
+          try {
+            const response = await fetch('/api/status');
+            this.updateStatusIndicator(response.ok);
+          } catch {
+            this.updateStatusIndicator(false);
+          }
+        }, 10000);
+
+        setInterval(async () => {
+          try {
+            const response = await fetch('/api/distress');
+            if (response.ok) {
+              const data = await response.json();
+              this.updateDistressMonitor(data);
+            }
+          } catch {
+            // Silently ignore
+          }
+        }, 2000);
+      }
+
+      updateDistressMonitor(data) {
+        const levelEl = document.getElementById('distressLevel');
+        const barEl = document.getElementById('distressBar');
+        const scoreEl = document.getElementById('distressScore');
+        const facesEl = document.getElementById('distressFaces');
+
+        if (!levelEl) return;
+
+        const level = data.level || 'NORMAL';
+        const score = data.distress_score || 0;
+        const faces = data.face_count || 0;
+
+        levelEl.textContent = level;
+        levelEl.className = 'distress-level level-' + level.toLowerCase();
+
+        scoreEl.textContent = score.toFixed(3);
+        facesEl.textContent = faces;
+
+        const pct = Math.min(100, Math.max(0, score * 100));
+        barEl.style.width = pct + '%';
+
+        if (level === 'CRITICAL') {
+          barEl.style.background = 'var(--critical)';
+        } else if (level === 'WARNING') {
+          barEl.style.background = 'var(--warning)';
+        } else {
+          barEl.style.background = 'var(--normal)';
+        }
+      }
+    }
+
+
+    // --- Global functions ---
+    function expandPatient(patientId) {
+      if (!dashboardInstance) return;
+      const patient = dashboardInstance.patients.get(patientId);
+      if (!patient) return;
+
+      const overlay = document.getElementById('expandModalOverlay');
+      const img = document.getElementById('expandModalImg');
+      document.getElementById('expandModalName').textContent = patient.name || 'Patient ' + patient.id;
+      document.getElementById('expandModalDept').textContent = patient.department ? patient.department.charAt(0).toUpperCase() + patient.department.slice(1) : 'N/A';
+      document.getElementById('expandModalCare').textContent = patient.care_type ? patient.care_type.toUpperCase() : 'N/A';
+      document.getElementById('expandModalBadge').innerHTML = `<span class="patient-badge ${patient.status}">${patient.status.toUpperCase()}</span>`;
+
+      // Populate detail fields
+      const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
+      document.getElementById('expandModalId').textContent = patient.id;
+      document.getElementById('expandModalGender').textContent = cap(patient.gender);
+      document.getElementById('expandModalAdmission').textContent = patient.admission_date || '—';
+      document.getElementById('expandModalCause').textContent = patient.cause || '—';
+      document.getElementById('expandModalWard').textContent = patient.ward_no || '—';
+      document.getElementById('expandModalBed').textContent = patient.bed_number || '—';
+      document.getElementById('expandModalDoctor').textContent = patient.doctor_assigned || '—';
+      document.getElementById('expandModalNurse').textContent = patient.assigned_nurse || '—';
+      document.getElementById('expandModalHistory').textContent = patient.previous_medical_history || '—';
+      document.getElementById('expandModalNotes').textContent = patient.notes || '—';
+
+      if (dashboardInstance._snapshotUrl) img.src = dashboardInstance._snapshotUrl;
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeExpandModal() {
+      document.getElementById('expandModalOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeExpandModal();
+    });
+
+    let dashboardInstance = null;
+    document.addEventListener('DOMContentLoaded', () => {
+      dashboardInstance = new VitalWatchDashboard();
+    });
+
+    function openAddPatientModal() {
+      document.getElementById('addPatientModal').style.display = 'block';
+      document.getElementById('addPatientForm').reset();
+      document.body.classList.add('modal-open');
+    }
+
+    function closeAddPatientModal() {
+      document.getElementById('addPatientModal').style.display = 'none';
+      document.body.classList.remove('modal-open');
+    }
+
+    window.onclick = function (event) {
+      const modal = document.getElementById('addPatientModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      }
+    }
+
+    async function submitAddPatientForm(event) {
+      event.preventDefault();
+
+      const form = document.getElementById('addPatientForm');
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalText = submitButton.textContent;
+      submitButton.textContent = 'Creating...';
+      submitButton.disabled = true;
+
+      const formData = new FormData(form);
+      const data = {
+        name: formData.get('name'),
+        gender: formData.get('gender') || 'other',
+        department: formData.get('department'),
+        care_type: formData.get('care_type'),
+        admission_date: formData.get('admission_date') || null,
+        cause: formData.get('cause') || null,
+        ward_no: formData.get('ward_no') || null,
+        bed_number: formData.get('bed_number') || null,
+        doctor_assigned: formData.get('doctor_assigned') || null,
+        assigned_nurse: formData.get('assigned_nurse') || null,
+        previous_medical_history: formData.get('previous_medical_history') || null,
+        notes: formData.get('notes') || null,
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      try {
+        const response = await fetch('/api/patients/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create patient');
+        }
+
+        closeAddPatientModal();
+        form.reset();
+
+        if (dashboardInstance) {
+          await dashboardInstance.loadPatients();
+        }
+
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('Error creating patient:', error);
+        const msg = error.name === 'AbortError'
+          ? 'Request timed out. Please check if the server is running.'
+          : error.message;
+        alert('Error creating patient: ' + msg);
+      } finally {
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
+      }
+    }
+  </script>
+</body>
+
+</html>
